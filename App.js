@@ -1,25 +1,38 @@
 import { StatusBar } from "expo-status-bar";
 import React from "react";
-import { 
-  StyleSheet, 
-  Text, 
-  View, 
-  TextInput, 
-  Dimensions, 
-  Platform, 
-  ScrollView 
+import {
+  StyleSheet,
+  Text,
+  View,
+  TextInput,
+  Dimensions,
+  Platform,
+  ScrollView,
 } from "react-native";
 import { render } from "react-dom";
+import { AppLoading } from "expo";
 import ToDo from "./ToDo";
+import {v1 as uuidv1} from 'uuid';
 
 const { height, width } = Dimensions.get("window");
 
 export default class App extends React.Component {
   state = {
-    newTodo: ""
+    newTodo: "",
+    loadedToDos: false,
+    toDos: {}
   };
+  componentDidMount = () => {
+    this._loadToDos();
+  };
+
   render() {
-    const { newToDo } = this.state;
+    const { newToDo, loadedToDos, toDos } = this.state;
+    console.log(toDos);
+
+    if (!loadedToDos) {
+      return <AppLoading />;
+    }
     return (
       <View style={styles.container}>
         <StatusBar barStyle="light-content" />
@@ -33,17 +46,60 @@ export default class App extends React.Component {
             placeholderTextColor={"#999"}
             returnKeyType={"done"}
             autoCorrect={false}
+            onSubmitEditing={this._addToDo}
           />
           <ScrollView contentContainerStyle={styles.toDos}>
-            <ToDo />
+            {Object.values(toDos).map(toDo => <ToDo key={toDo.id} {...toDo} deleteToDo={this._deleteToDo}/>)}
           </ScrollView>
         </View>
       </View>
     );
   }
-  _controlNewToDo = text => {
+  _controlNewToDo = (text) => {
     this.setState({
-      newToDo: text
+      newToDo: text,
+    });
+  };
+  _loadToDos = () => {
+    this.setState({
+      loadedToDos: true,
+    });
+  };
+  _addToDo = () => {
+    const { newToDo } = this.state;
+
+    if (newToDo != "") {
+      this.setState(prevState => {
+        const ID = uuidv1();
+        const newToDoObject = {
+          [ID] : {
+            id: ID,
+            isCompleted: false,
+            text: newToDo,
+            createdAt: Date.now()
+          }
+        };
+        const newState = {
+          ...prevState,
+          newToDo: "",
+          toDos: {
+            ...prevState.toDos,
+            ...newToDoObject
+          }
+        }
+        return {...newState};
+      });
+    }
+  };
+  _deleteToDo = (id) => {
+    this.setState(prevState => {
+      const toDos = prevState.toDos;
+      delete toDos[id];
+      const newState = {
+        ...prevState,
+        ...toDos
+      }
+      return {...newState};
     })
   }
 }
@@ -75,21 +131,21 @@ const styles = StyleSheet.create({
         shadowRadius: 5,
         shadowOffset: {
           height: -1,
-          width: 0
-        }
+          width: 0,
+        },
       },
       android: {
-        elevation: 3
-      }
-    })
+        elevation: 3,
+      },
+    }),
   },
   input: {
     padding: 20,
     borderBottomColor: "#bbb",
     borderBottomWidth: 1,
-    fontSize: 25
+    fontSize: 25,
   },
   toDos: {
-    alignItems: "center"
-  }
+    alignItems: "center",
+  },
 });
